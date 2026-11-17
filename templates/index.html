@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-grid">
+    <div class="card">
+        <h2>Registrar Producto</h2>
+        <form action="{{ url_for('registrar') }}" method="POST">
+            <div class="form-group">
+                <label for="nombre">Nombre</label>
+                <input type="text" id="nombre" name="nombre" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <textarea id="descripcion" name="descripcion" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="cantidad">Cantidad</label>
+                <input type="number" id="cantidad" name="cantidad" required min="0">
+            </div>
+            <div class="form-group">
+                <label for="precio">Precio ($)</label>
+                <input type="number" id="precio" name="precio" step="0.01" required min="0">
+            </div>
+            <div class="form-group">
+                <label for="categoria">Categoría</label>
+                <input type="text" id="categoria" name="categoria" autocomplete="off">
+            </div>
+            <button type="submit" class="btn">Guardar Producto</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Listado de Inventario</h2>
+
+        <form method="GET" action="{{ url_for('index') }}" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+            <select name="criterio" style="max-width: 140px;">
+                <option value="nombre">Nombre</option>
+                <option value="categoria">Categoría</option>
+                <option value="id">ID</option>
+            </select>
+            <input type="text" name="valor" placeholder="Buscar..." autocomplete="off">
+            <button type="submit" class="btn btn-sm">Buscar</button>
+            <a href="{{ url_for('index') }}" class="btn btn-sm" style="background-color: var(--border); color: white; display:flex; align-items:center; justify-content:center; text-decoration:none;">Todos</a>
+        </form>
+
+        <div class="table-responsive">
+            {% if productos %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Stock</th>
+                        <th>Precio</th>
+                        <th>Categoría</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in productos %}
+                    <tr>
+                        <td>{{ p[0] }}</td>
+                        <td><strong>{{ p[1] }}</strong></td>
+                        <td>{{ p[3] }}</td>
+                        <td>${{ "%.2f"|format(p[4]) }}</td>
+                        <td>{{ p[5] }}</td>
+                        <td>
+                            <div class="actions-cell">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm"
+                                    data-dialog-open="edit-dialog-{{ p[0] }}"
+                                    aria-haspopup="dialog"
+                                    aria-controls="edit-dialog-{{ p[0] }}"
+                                >Editar</button>
+                                <dialog
+                                    id="edit-dialog-{{ p[0] }}"
+                                    class="edit-dialog"
+                                    aria-labelledby="edit-dialog-title-{{ p[0] }}"
+                                >
+                                    <form class="edit-form" action="{{ url_for('actualizar', id_prod=p[0]) }}" method="POST">
+                                        <div class="dialog-header">
+                                            <div>
+                                                <p class="dialog-eyebrow">Inventario</p>
+                                                <h2 id="edit-dialog-title-{{ p[0] }}">Editar producto</h2>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-secondary" data-dialog-close>
+                                                Cerrar
+                                            </button>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="nombre-{{ p[0] }}">Nombre</label>
+                                            <input type="text" id="nombre-{{ p[0] }}" name="nombre" value="{{ p[1] }}" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="descripcion-{{ p[0] }}">Descripción</label>
+                                            <textarea id="descripcion-{{ p[0] }}" name="descripcion" rows="2">{{ p[2] or '' }}</textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="cantidad-{{ p[0] }}">Cantidad</label>
+                                            <input type="number" id="cantidad-{{ p[0] }}" name="cantidad" value="{{ p[3] }}" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="precio-{{ p[0] }}">Precio ($)</label>
+                                            <input type="number" id="precio-{{ p[0] }}" name="precio" value="{{ p[4] }}" step="0.01" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="categoria-{{ p[0] }}">Categoría</label>
+                                            <input type="text" id="categoria-{{ p[0] }}" name="categoria" value="{{ p[5] or '' }}">
+                                        </div>
+                                        <div class="dialog-actions">
+                                            <button type="button" class="btn btn-secondary" data-dialog-close>Cancelar</button>
+                                            <button type="submit" class="btn">Guardar cambios</button>
+                                        </div>
+                                    </form>
+                                </dialog>
+                                <form action="{{ url_for('eliminar', id_prod=p[0]) }}" method="POST" onsubmit="return confirm('¿Confirma la eliminación de este registro?');">
+                                    <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <p>No se encontraron registros en el inventario.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<section class="card transfer-card">
+    <h2>Importar, exportar y respaldar</h2>
+    <div class="transfer-grid">
+        <div class="transfer-group">
+            <h3>Carga masiva</h3>
+            <p>Importá varios productos desde una planilla o un archivo JSON.</p>
+            <form action="{{ url_for('importar') }}" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="archivo-excel">Planilla Excel (.xls o .xlsx)</label>
+                    <input type="file" id="archivo-excel" name="archivo" accept=".xls,.xlsx" required>
+                </div>
+                <button type="submit" class="btn">Importar Excel</button>
+            </form>
+            <form action="{{ url_for('importar') }}" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="archivo-json">Archivo JSON (.json)</label>
+                    <input type="file" id="archivo-json" name="archivo" accept=".json" required>
+                </div>
+                <button type="submit" class="btn">Importar JSON</button>
+            </form>
+        </div>
+
+        <div class="transfer-group">
+            <h3>Exportar inventario</h3>
+            <p>Descargá una copia legible de los productos o un respaldo recuperable.</p>
+            <div class="transfer-actions">
+                <a class="btn" href="{{ url_for('exportar', tipo='xlsx') }}">Exportar a Excel</a>
+                <a class="btn" href="{{ url_for('exportar', tipo='json') }}">Exportar a JSON</a>
+                <a class="btn btn-secondary" href="{{ url_for('exportar', tipo='respaldo') }}">Descargar respaldo de la base</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
